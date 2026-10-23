@@ -5,7 +5,9 @@
   "description": "Full-Stack Production School Management System",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start:dev": "npm run dev",
     "dev:backend": "npm --prefix backend run dev",
+    "start:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "build:backend": "npm --prefix backend run build",
     "build:frontend": "npm --prefix frontend run build",
