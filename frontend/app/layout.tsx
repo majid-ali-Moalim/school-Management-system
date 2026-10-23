@@ -45,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>Apex Academy — School Management System</title>
+        <title>School Management System</title>
         <meta name="description" content="Production-ready School Administration Platform" />
       </head>
       <body>

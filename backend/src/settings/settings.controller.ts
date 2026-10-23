@@ -59,12 +59,12 @@ router.patch('/', authenticate, requireRole(UserRole.ADMIN), async (req: Authent
       },
       create: {
         id: 'default',
-        schoolName: schoolName || 'Apex International Academy',
+        schoolName: schoolName || 'School Management System',
         logoUrl,
         address: address || '124 Education Boulevard',
         phone: phone || '+1 (555) 234-5678',
-        email: email || 'info@apexacademy.edu',
-        website: website || 'https://apexacademy.edu',
+        email: email || 'info@school.local',
+        website: website || 'https://school.local',
       },
     });
 

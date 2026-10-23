@@ -384,7 +384,7 @@ export default function TeachersPage() {
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `Apex Academy Teacher Credentials:\nUsername: ${createdCredentials.username}\nPassword: ${createdCredentials.temporaryPassword}\nLogin Portal: ${window.location.origin}/login`
+                    `School Management System — Teacher Credentials:\nUsername: ${createdCredentials.username}\nPassword: ${createdCredentials.temporaryPassword}\nLogin Portal: ${window.location.origin}/login`
                   );
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);

@@ -391,7 +391,7 @@ router.get('/report-card/:studentId', authenticate, async (req: AuthenticatedReq
 
     const reportCard = {
       school: {
-        name: schoolSetting?.schoolName || 'Apex International Academy',
+        name: schoolSetting?.schoolName || 'School Management System',
         logoUrl: schoolSetting?.logoUrl,
         address: schoolSetting?.address,
         phone: schoolSetting?.phone,

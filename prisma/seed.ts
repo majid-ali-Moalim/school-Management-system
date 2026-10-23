@@ -1,33 +1,63 @@
-import { PrismaClient, UserRole, UserStatus, Gender, StudentStatus, TeacherStatus, AcademicStatus, AttendanceStatus, ExamType, ExamStatus, ResultStatus, DayOfWeek, AnnouncementAudience } from '@prisma/client';
+import { PrismaClient, UserRole, UserStatus, Gender, StudentStatus, TeacherStatus, AcademicStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting comprehensive database seed for School Management System...');
+  console.log('🌱 Initializing clean production database with authentic role accounts...');
 
-  // Hardcoded Admin Credentials as requested:
-  // Login: admin@gmail.com
-  // Pass: 123321@Admin
-  const initialAdminEmail = 'admin@gmail.com';
-  const initialAdminPass = '123321@Admin';
-  const passwordHashAdmin = await bcrypt.hash('123321@Admin', 10);
-  const passwordHashTeacher = await bcrypt.hash('Teacher123!', 10);
-  const passwordHashStudent = await bcrypt.hash('Student123!', 10);
+  // 1. Clean out previous demo/mock data
+  console.log('🧹 Purging any previous demo data (exams, results, attendance, announcements, notifications)...');
+  await prisma.examResult.deleteMany({});
+  await prisma.examSubject.deleteMany({});
+  await prisma.exam.deleteMany({});
+  await prisma.attendance.deleteMany({});
+  await prisma.timetable.deleteMany({});
+  await prisma.notification.deleteMany({});
+  await prisma.announcement.deleteMany({});
+  await prisma.auditLog.deleteMany({});
+  await prisma.teacherSubjectClassAssignment.deleteMany({});
+  await prisma.enrollment.deleteMany({});
 
-  // 1. School Settings
-  console.log('Creating school settings...');
+  // Clean out non-role demo students & teachers
+  await prisma.student.deleteMany({
+    where: {
+      studentNumber: { not: 'B20092' }
+    }
+  });
+  await prisma.teacher.deleteMany({
+    where: {
+      employeeNumber: { not: 'TCH-001' }
+    }
+  });
+  await prisma.user.deleteMany({
+    where: {
+      AND: [
+        { email: { not: 'admin@gmail.com' } },
+        { username: { notIn: ['admin', 'ahmed.teacher', 'B20092'] } }
+      ]
+    }
+  });
+
+  // 2. School Settings (Institutional School Management System)
+  console.log('Configuring School Management System settings...');
   const setting = await prisma.schoolSetting.upsert({
     where: { id: 'default' },
-    update: {},
+    update: {
+      schoolName: 'School Management System',
+      address: '124 Education Boulevard, Academic District',
+      phone: '+1 (555) 234-5678',
+      email: 'info@school.local',
+      website: 'https://school.local',
+    },
     create: {
       id: 'default',
-      schoolName: 'Apex International Academy',
+      schoolName: 'School Management System',
       logoUrl: '/images/school-logo.svg',
       address: '124 Education Boulevard, Academic District',
       phone: '+1 (555) 234-5678',
-      email: 'info@apexacademy.edu',
-      website: 'https://apexacademy.edu',
+      email: 'info@school.local',
+      website: 'https://school.local',
       timezone: 'UTC',
       dateFormat: 'YYYY-MM-DD',
       notificationSettings: {
@@ -39,8 +69,8 @@ async function main() {
     }
   });
 
-  // 2. Grading Scales
-  console.log('Configuring default grading scales...');
+  // 3. Grading Scales
+  console.log('Configuring standard institutional grading scales...');
   const gradingData = [
     { name: 'Standard Scale', minScore: 90, maxScore: 100, grade: 'A+', gradePoint: 4.0, remarks: 'Outstanding', order: 1 },
     { name: 'Standard Scale', minScore: 80, maxScore: 89.99, grade: 'A', gradePoint: 3.7, remarks: 'Excellent', order: 2 },
@@ -59,8 +89,8 @@ async function main() {
     }
   }
 
-  // 3. Academic Year & Terms
-  console.log('Creating academic years and terms...');
+  // 4. Academic Year & Current Term
+  console.log('Configuring academic calendar...');
   const academicYear = await prisma.academicYear.upsert({
     where: { name: '2026/2027' },
     update: { isCurrent: true, status: AcademicStatus.ACTIVE },
@@ -86,32 +116,6 @@ async function main() {
     }
   });
 
-  const term2 = await prisma.term.upsert({
-    where: { academicYearId_name: { academicYearId: academicYear.id, name: 'Term 2' } },
-    update: {},
-    create: {
-      academicYearId: academicYear.id,
-      name: 'Term 2',
-      startDate: new Date('2027-01-10'),
-      endDate: new Date('2027-03-25'),
-      isCurrent: false,
-      status: AcademicStatus.ACTIVE
-    }
-  });
-
-  const term3 = await prisma.term.upsert({
-    where: { academicYearId_name: { academicYearId: academicYear.id, name: 'Term 3' } },
-    update: {},
-    create: {
-      academicYearId: academicYear.id,
-      name: 'Term 3',
-      startDate: new Date('2027-04-10'),
-      endDate: new Date('2027-06-30'),
-      isCurrent: false,
-      status: AcademicStatus.ACTIVE
-    }
-  });
-
   await prisma.schoolSetting.update({
     where: { id: 'default' },
     data: {
@@ -120,33 +124,8 @@ async function main() {
     }
   });
 
-  // 4. Classes & Sections
-  console.log('Creating classes and sections...');
-  const grade7 = await prisma.class.upsert({
-    where: { academicYearId_name: { academicYearId: academicYear.id, name: 'Grade 7' } },
-    update: {},
-    create: {
-      name: 'Grade 7',
-      gradeLevel: 7,
-      academicYearId: academicYear.id,
-      capacity: 60,
-      room: 'Block A - 101',
-      status: AcademicStatus.ACTIVE
-    }
-  });
-
-  const sec7A = await prisma.section.upsert({
-    where: { classId_name: { classId: grade7.id, name: '7A' } },
-    update: {},
-    create: { name: '7A', classId: grade7.id, capacity: 30, room: 'Block A - 101' }
-  });
-
-  const sec7B = await prisma.section.upsert({
-    where: { classId_name: { classId: grade7.id, name: '7B' } },
-    update: {},
-    create: { name: '7B', classId: grade7.id, capacity: 30, room: 'Block A - 102' }
-  });
-
+  // 5. Classes & Sections
+  console.log('Configuring base classroom structures...');
   const grade8 = await prisma.class.upsert({
     where: { academicYearId_name: { academicYearId: academicYear.id, name: 'Grade 8' } },
     update: {},
@@ -166,65 +145,51 @@ async function main() {
     create: { name: '8A', classId: grade8.id, capacity: 30, room: 'Block B - 201' }
   });
 
-  const sec8B = await prisma.section.upsert({
-    where: { classId_name: { classId: grade8.id, name: '8B' } },
-    update: {},
-    create: { name: '8B', classId: grade8.id, capacity: 30, room: 'Block B - 202' }
-  });
-
-  const grade9 = await prisma.class.upsert({
-    where: { academicYearId_name: { academicYearId: academicYear.id, name: 'Grade 9' } },
+  // 6. Core Subjects
+  console.log('Configuring core subjects...');
+  const mathSubject = await prisma.subject.upsert({
+    where: { code: 'MAT101' },
     update: {},
     create: {
-      name: 'Grade 9',
-      gradeLevel: 9,
-      academicYearId: academicYear.id,
-      capacity: 35,
-      room: 'Block C - 301',
-      status: AcademicStatus.ACTIVE
+      code: 'MAT101',
+      name: 'Mathematics',
+      description: 'Algebra, Geometry, and Numeracy',
+      creditHours: 3,
+      maxScore: 100,
+      passScore: 50
     }
   });
 
-  const sec9A = await prisma.section.upsert({
-    where: { classId_name: { classId: grade9.id, name: '9A' } },
+  const engSubject = await prisma.subject.upsert({
+    where: { code: 'ENG101' },
     update: {},
-    create: { name: '9A', classId: grade9.id, capacity: 35, room: 'Block C - 301' }
+    create: {
+      code: 'ENG101',
+      name: 'English Language',
+      description: 'Grammar, Literature, and Writing',
+      creditHours: 3,
+      maxScore: 100,
+      passScore: 50
+    }
   });
 
-  // 5. Subjects
-  console.log('Creating academic subjects...');
-  const subjectsData = [
-    { code: 'MAT101', name: 'Mathematics', description: 'Core Mathematics & Geometry', creditHours: 4, maxScore: 100, passScore: 50 },
-    { code: 'ENG101', name: 'English Language', description: 'English Grammar & Literature', creditHours: 3, maxScore: 100, passScore: 50 },
-    { code: 'SCI101', name: 'General Science', description: 'Physics, Chemistry, & Biology foundations', creditHours: 4, maxScore: 100, passScore: 50 },
-    { code: 'ICT101', name: 'Computer Science', description: 'Information Technology, Coding, & Digital Literacy', creditHours: 3, maxScore: 100, passScore: 50 },
-    { code: 'SOM101', name: 'Somali Language', description: 'Somali Literature, Poetry, & History', creditHours: 3, maxScore: 100, passScore: 50 },
-    { code: 'ARB101', name: 'Arabic Language', description: 'Arabic Grammar, Reading, & Vocabulary', creditHours: 3, maxScore: 100, passScore: 50 },
-    { code: 'SOC101', name: 'Social Studies', description: 'World History, Geography, & Civics', creditHours: 2, maxScore: 100, passScore: 50 },
-  ];
-
-  const subjectsMap: Record<string, any> = {};
-  for (const s of subjectsData) {
-    const sub = await prisma.subject.upsert({
-      where: { code: s.code },
-      update: {},
-      create: s
-    });
-    subjectsMap[s.code] = sub;
-  }
-
-  // 6. Admin User (Section 2 & 36)
-  console.log('Creating Admin account...');
-
+  // 7. Role Account: ADMIN (admin@gmail.com / 123321@Admin)
+  console.log('Configuring ADMIN account (admin@gmail.com)...');
+  const passwordHashAdmin = await bcrypt.hash('123321@Admin', 10);
   const adminUser = await prisma.user.upsert({
-    where: { email: initialAdminEmail },
-    update: { password: passwordHashAdmin, role: UserRole.ADMIN, status: UserStatus.ACTIVE },
+    where: { email: 'admin@gmail.com' },
+    update: {
+      password: passwordHashAdmin,
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+      mustChangePassword: false,
+    },
     create: {
-      email: initialAdminEmail,
+      email: 'admin@gmail.com',
       username: 'admin',
       password: passwordHashAdmin,
       role: UserRole.ADMIN,
-      firstName: 'Principal',
+      firstName: 'System',
       lastName: 'Administrator',
       phone: '+1 (555) 900-1000',
       status: UserStatus.ACTIVE,
@@ -232,624 +197,248 @@ async function main() {
     }
   });
 
-  // 7. Teachers
-  console.log('Creating Teachers and profiles...');
-  const teachersList = [
-    {
-      email: 'ahmed.hassan@school.local',
-      username: 'ahmed.teacher',
-      firstName: 'Ahmed',
-      middleName: 'Ali',
-      lastName: 'Hassan',
-      employeeNumber: 'TCH-001',
-      qualification: 'M.Sc. Mathematics & Education',
-      specialization: 'Pure Mathematics',
-      phone: '+1 (555) 101-2001',
-      gender: Gender.MALE
-    },
-    {
-      email: 'sarah.connor@school.local',
-      firstName: 'Sarah',
-      middleName: 'Jane',
-      lastName: 'Connor',
-      employeeNumber: 'TCH-002',
-      qualification: 'M.A. English Literature',
-      specialization: 'Linguistics & Creative Writing',
-      phone: '+1 (555) 101-2002',
-      gender: Gender.FEMALE
-    },
-    {
-      email: 'david.miller@school.local',
-      firstName: 'David',
-      middleName: 'Paul',
-      lastName: 'Miller',
-      employeeNumber: 'TCH-003',
-      qualification: 'B.Sc. Applied Sciences',
-      specialization: 'Physics & Chemistry',
-      phone: '+1 (555) 101-2003',
-      gender: Gender.MALE
-    },
-    {
-      email: 'fatima.ali@school.local',
-      firstName: 'Fatima',
-      middleName: 'Zahra',
-      lastName: 'Ali',
-      employeeNumber: 'TCH-004',
-      qualification: 'B.Sc. Computer Science',
-      specialization: 'Programming & Web Technologies',
-      phone: '+1 (555) 101-2004',
-      gender: Gender.FEMALE
-    },
-    {
-      email: 'omar.farah@school.local',
-      firstName: 'Omar',
-      middleName: 'Hussein',
-      lastName: 'Farah',
-      employeeNumber: 'TCH-005',
-      qualification: 'B.A. Islamic Studies & Arabic',
-      specialization: 'Arabic Philology',
-      phone: '+1 (555) 101-2005',
-      gender: Gender.MALE
+  // 8. Role Account: TEACHER (ahmed.teacher / Teacher123!)
+  console.log('Configuring TEACHER account (ahmed.teacher)...');
+  const passwordHashTeacher = await bcrypt.hash('Teacher123!', 10);
+  
+  let teacherUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { username: 'ahmed.teacher' },
+        { email: 'ahmed.teacher@school.local' },
+        { email: 'ahmed.hassan@school.local' }
+      ]
     }
-  ];
+  });
 
-  const teachersMap: Record<string, any> = {};
-
-  for (const t of teachersList) {
-    const username = (t as any).username || t.email.split('@')[0];
-    const user = await prisma.user.upsert({
-      where: { email: t.email },
-      update: { username },
-      create: {
-        username,
-        email: t.email,
+  if (teacherUser) {
+    teacherUser = await prisma.user.update({
+      where: { id: teacherUser.id },
+      data: {
+        username: 'ahmed.teacher',
+        email: 'ahmed.teacher@school.local',
         password: passwordHashTeacher,
         role: UserRole.TEACHER,
-        firstName: t.firstName,
-        middleName: t.middleName,
-        lastName: t.lastName,
-        phone: t.phone,
         status: UserStatus.ACTIVE,
         mustChangePassword: false,
       }
     });
+  } else {
+    teacherUser = await prisma.user.create({
+      data: {
+        username: 'ahmed.teacher',
+        email: 'ahmed.teacher@school.local',
+        password: passwordHashTeacher,
+        role: UserRole.TEACHER,
+        firstName: 'Ahmed',
+        lastName: 'Hassan',
+        phone: '+1 (555) 101-2001',
+        status: UserStatus.ACTIVE,
+        mustChangePassword: false,
+      }
+    });
+  }
 
-    const teacher = await prisma.teacher.upsert({
-      where: { userId: user.id },
-      update: {
-        employeeNumber: t.employeeNumber,
-      },
-      create: {
-        userId: user.id,
-        employeeNumber: t.employeeNumber,
-        firstName: t.firstName,
-        middleName: t.middleName,
-        lastName: t.lastName,
-        gender: t.gender,
-        phone: t.phone,
-        email: t.email,
-        qualification: t.qualification,
-        specialization: t.specialization,
+  let teacherProfile = await prisma.teacher.findFirst({
+    where: {
+      OR: [
+        { userId: teacherUser.id },
+        { employeeNumber: 'TCH-001' }
+      ]
+    }
+  });
+
+  if (teacherProfile) {
+    teacherProfile = await prisma.teacher.update({
+      where: { id: teacherProfile.id },
+      data: {
+        userId: teacherUser.id,
+        employeeNumber: 'TCH-001',
+        firstName: 'Ahmed',
+        lastName: 'Hassan',
+        gender: Gender.MALE,
+        phone: '+1 (555) 101-2001',
+        email: 'ahmed.teacher@school.local',
+        qualification: 'M.Sc. Mathematics',
+        specialization: 'Pure Mathematics',
         status: TeacherStatus.ACTIVE
       }
     });
-
-    teachersMap[t.employeeNumber] = teacher;
-  }
-
-  // 8. Teacher Assignments
-  console.log('Creating Teacher Subject & Class Assignments...');
-  const assignmentsData = [
-    // Ahmed Hassan teaches Math to 8A & 8B
-    { teacherId: teachersMap['TCH-001'].id, subjectId: subjectsMap['MAT101'].id, classId: grade8.id, sectionId: sec8A.id },
-    { teacherId: teachersMap['TCH-001'].id, subjectId: subjectsMap['MAT101'].id, classId: grade8.id, sectionId: sec8B.id },
-    // Sarah Connor teaches English to 8A & 8B
-    { teacherId: teachersMap['TCH-002'].id, subjectId: subjectsMap['ENG101'].id, classId: grade8.id, sectionId: sec8A.id },
-    { teacherId: teachersMap['TCH-002'].id, subjectId: subjectsMap['ENG101'].id, classId: grade8.id, sectionId: sec8B.id },
-    // David Miller teaches Science to 8A & 7A
-    { teacherId: teachersMap['TCH-003'].id, subjectId: subjectsMap['SCI101'].id, classId: grade8.id, sectionId: sec8A.id },
-    { teacherId: teachersMap['TCH-003'].id, subjectId: subjectsMap['SCI101'].id, classId: grade7.id, sectionId: sec7A.id },
-    // Fatima Ali teaches ICT to 8A & 9A
-    { teacherId: teachersMap['TCH-004'].id, subjectId: subjectsMap['ICT101'].id, classId: grade8.id, sectionId: sec8A.id },
-    { teacherId: teachersMap['TCH-004'].id, subjectId: subjectsMap['ICT101'].id, classId: grade9.id, sectionId: sec9A.id },
-  ];
-
-  for (const asg of assignmentsData) {
-    const existing = await prisma.teacherSubjectClassAssignment.findFirst({
-      where: {
-        teacherId: asg.teacherId,
-        subjectId: asg.subjectId,
-        classId: asg.classId,
-        sectionId: asg.sectionId,
-        academicYearId: academicYear.id
+  } else {
+    teacherProfile = await prisma.teacher.create({
+      data: {
+        userId: teacherUser.id,
+        employeeNumber: 'TCH-001',
+        firstName: 'Ahmed',
+        lastName: 'Hassan',
+        gender: Gender.MALE,
+        phone: '+1 (555) 101-2001',
+        email: 'ahmed.teacher@school.local',
+        qualification: 'M.Sc. Mathematics',
+        specialization: 'Pure Mathematics',
+        status: TeacherStatus.ACTIVE
       }
     });
-
-    if (!existing) {
-      await prisma.teacherSubjectClassAssignment.create({
-        data: {
-          teacherId: asg.teacherId,
-          subjectId: asg.subjectId,
-          classId: asg.classId,
-          sectionId: asg.sectionId,
-          academicYearId: academicYear.id,
-          termId: term1.id,
-          status: AcademicStatus.ACTIVE
-        }
-      });
-    }
   }
 
-  // 9. Students
-  console.log('Creating Students, accounts, and Enrollments...');
-  const studentsList = [
-    {
-      email: 'student@school.local',
-      username: 'B20092',
-      firstName: 'Alex',
-      middleName: 'Tyler',
-      lastName: 'Johnson',
-      studentNumber: 'B20092',
-      admissionNumber: 'ADM-2026-001',
-      gender: Gender.MALE,
-      dateOfBirth: new Date('2012-04-15'),
-      phone: '+1 (555) 400-3001',
-      guardianName: 'Michael Johnson',
-      guardianPhone: '+1 (555) 400-3002',
-      guardianEmail: 'mjohnson@example.com',
-      relationship: 'Father',
+  // Assign Ahmed to Grade 8A Mathematics
+  await prisma.teacherSubjectClassAssignment.upsert({
+    where: {
+      teacherId_subjectId_classId_sectionId_academicYearId: {
+        teacherId: teacherProfile.id,
+        subjectId: mathSubject.id,
+        classId: grade8.id,
+        sectionId: sec8A.id,
+        academicYearId: academicYear.id,
+      }
+    },
+    update: {},
+    create: {
+      teacherId: teacherProfile.id,
+      subjectId: mathSubject.id,
       classId: grade8.id,
-      sectionId: sec8A.id
-    },
-    {
-      email: 'halima@school.local',
-      firstName: 'Halima',
-      middleName: 'Khadar',
-      lastName: 'Aden',
-      studentNumber: 'STU-2026-002',
-      admissionNumber: 'ADM-2026-002',
-      gender: Gender.FEMALE,
-      dateOfBirth: new Date('2012-07-22'),
-      phone: '+1 (555) 400-3003',
-      guardianName: 'Amina Aden',
-      guardianPhone: '+1 (555) 400-3004',
-      guardianEmail: 'aaden@example.com',
-      relationship: 'Mother',
-      classId: grade8.id,
-      sectionId: sec8A.id
-    },
-    {
-      email: 'liam@school.local',
-      firstName: 'Liam',
-      middleName: 'Edward',
-      lastName: 'Brown',
-      studentNumber: 'STU-2026-003',
-      admissionNumber: 'ADM-2026-003',
-      gender: Gender.MALE,
-      dateOfBirth: new Date('2012-02-10'),
-      phone: '+1 (555) 400-3005',
-      guardianName: 'Robert Brown',
-      guardianPhone: '+1 (555) 400-3006',
-      guardianEmail: 'rbrown@example.com',
-      relationship: 'Father',
-      classId: grade8.id,
-      sectionId: sec8A.id
-    },
-    {
-      email: 'emma@school.local',
-      firstName: 'Emma',
-      middleName: 'Grace',
-      lastName: 'Davis',
-      studentNumber: 'STU-2026-004',
-      admissionNumber: 'ADM-2026-004',
-      gender: Gender.FEMALE,
-      dateOfBirth: new Date('2012-09-05'),
-      phone: '+1 (555) 400-3007',
-      guardianName: 'Sarah Davis',
-      guardianPhone: '+1 (555) 400-3008',
-      guardianEmail: 'sdavis@example.com',
-      relationship: 'Mother',
-      classId: grade8.id,
-      sectionId: sec8B.id
-    },
-    {
-      email: 'noah@school.local',
-      firstName: 'Noah',
-      middleName: 'Alexander',
-      lastName: 'Wilson',
-      studentNumber: 'STU-2026-005',
-      admissionNumber: 'ADM-2026-005',
-      gender: Gender.MALE,
-      dateOfBirth: new Date('2013-05-18'),
-      phone: '+1 (555) 400-3009',
-      guardianName: 'James Wilson',
-      guardianPhone: '+1 (555) 400-3010',
-      guardianEmail: 'jwilson@example.com',
-      relationship: 'Father',
-      classId: grade7.id,
-      sectionId: sec7A.id
-    },
-    {
-      email: 'sophia@school.local',
-      firstName: 'Sophia',
-      middleName: 'Isabella',
-      lastName: 'Martinez',
-      studentNumber: 'STU-2026-006',
-      admissionNumber: 'ADM-2026-006',
-      gender: Gender.FEMALE,
-      dateOfBirth: new Date('2011-11-30'),
-      phone: '+1 (555) 400-3011',
-      guardianName: 'Elena Martinez',
-      guardianPhone: '+1 (555) 400-3012',
-      guardianEmail: 'emartinez@example.com',
-      relationship: 'Mother',
-      classId: grade9.id,
-      sectionId: sec9A.id
+      sectionId: sec8A.id,
+      academicYearId: academicYear.id,
+      termId: term1.id,
     }
-  ];
+  });
 
-  const studentsMap: Record<string, any> = {};
+  // 9. Role Account: STUDENT (B20092 / Student123!)
+  console.log('Configuring STUDENT account (B20092)...');
+  const passwordHashStudent = await bcrypt.hash('Student123!', 10);
 
-  for (const s of studentsList) {
-    const username = (s as any).username || s.studentNumber;
-    const user = await prisma.user.upsert({
-      where: { email: s.email },
-      update: { username },
-      create: {
-        username,
-        email: s.email,
+  let studentUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { username: 'B20092' },
+        { email: 'student.b20092@school.local' },
+        { email: 'student@school.local' }
+      ]
+    }
+  });
+
+  if (studentUser) {
+    studentUser = await prisma.user.update({
+      where: { id: studentUser.id },
+      data: {
+        username: 'B20092',
+        email: 'student.b20092@school.local',
         password: passwordHashStudent,
         role: UserRole.STUDENT,
-        firstName: s.firstName,
-        middleName: s.middleName,
-        lastName: s.lastName,
-        phone: s.phone,
         status: UserStatus.ACTIVE,
         mustChangePassword: false,
       }
     });
-
-    const student = await prisma.student.upsert({
-      where: { userId: user.id },
-      update: {
-        studentNumber: s.studentNumber,
-        admissionNumber: s.admissionNumber,
-      },
-      create: {
-        userId: user.id,
-        studentNumber: s.studentNumber,
-        admissionNumber: s.admissionNumber,
-        firstName: s.firstName,
-        middleName: s.middleName,
-        lastName: s.lastName,
-        gender: s.gender,
-        dateOfBirth: s.dateOfBirth,
-        phone: s.phone,
-        email: s.email,
-        guardianName: s.guardianName,
-        guardianPhone: s.guardianPhone,
-        guardianEmail: s.guardianEmail,
-        relationship: s.relationship,
-        status: StudentStatus.ACTIVE
-      }
-    });
-
-    studentsMap[s.studentNumber] = student;
-
-    // Enrollment
-    await prisma.enrollment.upsert({
-      where: {
-        studentId_academicYearId: {
-          studentId: student.id,
-          academicYearId: academicYear.id
-        }
-      },
-      update: {
-        classId: s.classId,
-        sectionId: s.sectionId
-      },
-      create: {
-        studentId: student.id,
-        academicYearId: academicYear.id,
-        classId: s.classId,
-        sectionId: s.sectionId,
-        status: StudentStatus.ACTIVE
-      }
-    });
-  }
-
-  // 10. Attendance Records
-  console.log('Generating realistic attendance records...');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const grade8AStudents = [
-    studentsMap['B20092'],
-    studentsMap['STU-2026-002'],
-    studentsMap['STU-2026-003']
-  ];
-
-  for (let d = 0; d < 5; d++) {
-    const recordDate = new Date(today);
-    recordDate.setDate(today.getDate() - d);
-
-    for (let i = 0; i < grade8AStudents.length; i++) {
-      const stu = grade8AStudents[i];
-      let status: AttendanceStatus = AttendanceStatus.PRESENT;
-      let remarks: string | null = 'On time';
-
-      if (d === 1 && i === 2) {
-        status = AttendanceStatus.LATE;
-        remarks = 'Arrived 15 minutes late due to traffic';
-      } else if (d === 3 && i === 1) {
-        status = AttendanceStatus.EXCUSED;
-        remarks = 'Doctor appointment documented';
-      }
-
-      await prisma.attendance.upsert({
-        where: {
-          studentId_classId_date_subjectId: {
-            studentId: stu.id,
-            classId: grade8.id,
-            date: recordDate,
-            subjectId: subjectsMap['MAT101'].id
-          }
-        },
-        update: {},
-        create: {
-          studentId: stu.id,
-          classId: grade8.id,
-          sectionId: sec8A.id,
-          subjectId: subjectsMap['MAT101'].id,
-          teacherId: teachersMap['TCH-001'].id,
-          date: recordDate,
-          status,
-          remarks
-        }
-      });
-    }
-  }
-
-  // 11. Exams & Exam Subjects
-  console.log('Creating exams and exam subjects...');
-  const midtermExam = await prisma.exam.create({
-    data: {
-      name: 'Midterm Examination 2026',
-      type: ExamType.MIDTERM,
-      academicYearId: academicYear.id,
-      termId: term1.id,
-      startDate: new Date('2026-10-10'),
-      endDate: new Date('2026-10-18'),
-      status: ExamStatus.PUBLISHED,
-      description: 'Midterm comprehensive evaluations across core competencies.'
-    }
-  });
-
-  const finalExam = await prisma.exam.create({
-    data: {
-      name: 'Final Term Examination 2026',
-      type: ExamType.FINAL,
-      academicYearId: academicYear.id,
-      termId: term1.id,
-      startDate: new Date('2026-12-05'),
-      endDate: new Date('2026-12-14'),
-      status: ExamStatus.OPEN,
-      description: 'First term final board and institutional examinations.'
-    }
-  });
-
-  // Create exam subjects for Midterm in Grade 8
-  const examSubMath = await prisma.examSubject.create({
-    data: {
-      examId: midtermExam.id,
-      subjectId: subjectsMap['MAT101'].id,
-      classId: grade8.id,
-      maxScore: 100,
-      passScore: 50,
-      examDate: new Date('2026-10-10')
-    }
-  });
-
-  const examSubEng = await prisma.examSubject.create({
-    data: {
-      examId: midtermExam.id,
-      subjectId: subjectsMap['ENG101'].id,
-      classId: grade8.id,
-      maxScore: 100,
-      passScore: 50,
-      examDate: new Date('2026-10-12')
-    }
-  });
-
-  const examSubSci = await prisma.examSubject.create({
-    data: {
-      examId: midtermExam.id,
-      subjectId: subjectsMap['SCI101'].id,
-      classId: grade8.id,
-      maxScore: 100,
-      passScore: 50,
-      examDate: new Date('2026-10-14')
-    }
-  });
-
-  const examSubICT = await prisma.examSubject.create({
-    data: {
-      examId: midtermExam.id,
-      subjectId: subjectsMap['ICT101'].id,
-      classId: grade8.id,
-      maxScore: 100,
-      passScore: 50,
-      examDate: new Date('2026-10-16')
-    }
-  });
-
-  // Final exam subjects
-  await prisma.examSubject.create({
-    data: {
-      examId: finalExam.id,
-      subjectId: subjectsMap['MAT101'].id,
-      classId: grade8.id,
-      maxScore: 100,
-      passScore: 50,
-      examDate: new Date('2026-12-06')
-    }
-  });
-
-  // 12. Exam Results for Midterm
-  console.log('Inserting published exam results for Grade 8A students...');
-  const resultsData = [
-    // Alex Johnson (B20092)
-    { examId: midtermExam.id, examSubjectId: examSubMath.id, studentId: studentsMap['B20092'].id, score: 94, grade: 'A+', gradePoint: 4.0, remarks: 'Superb problem-solving' },
-    { examId: midtermExam.id, examSubjectId: examSubEng.id, studentId: studentsMap['B20092'].id, score: 88, grade: 'A', gradePoint: 3.7, remarks: 'Excellent essay writing' },
-    { examId: midtermExam.id, examSubjectId: examSubSci.id, studentId: studentsMap['B20092'].id, score: 91, grade: 'A+', gradePoint: 4.0, remarks: 'Brilliant conceptual grasp' },
-    { examId: midtermExam.id, examSubjectId: examSubICT.id, studentId: studentsMap['B20092'].id, score: 98, grade: 'A+', gradePoint: 4.0, remarks: 'Exceptional coding and logic' },
-
-    // Halima Aden (STU-002)
-    { examId: midtermExam.id, examSubjectId: examSubMath.id, studentId: studentsMap['STU-2026-002'].id, score: 86, grade: 'A', gradePoint: 3.7, remarks: 'Solid mastery' },
-    { examId: midtermExam.id, examSubjectId: examSubEng.id, studentId: studentsMap['STU-2026-002'].id, score: 95, grade: 'A+', gradePoint: 4.0, remarks: 'Outstanding comprehension' },
-    { examId: midtermExam.id, examSubjectId: examSubSci.id, studentId: studentsMap['STU-2026-002'].id, score: 89, grade: 'A', gradePoint: 3.7, remarks: 'Great lab experiment work' },
-    { examId: midtermExam.id, examSubjectId: examSubICT.id, studentId: studentsMap['STU-2026-002'].id, score: 92, grade: 'A+', gradePoint: 4.0, remarks: 'Great algorithmic accuracy' },
-
-    // Liam Brown (STU-003)
-    { examId: midtermExam.id, examSubjectId: examSubMath.id, studentId: studentsMap['STU-2026-003'].id, score: 76, grade: 'B', gradePoint: 3.0, remarks: 'Good effort, revise geometry' },
-    { examId: midtermExam.id, examSubjectId: examSubEng.id, studentId: studentsMap['STU-2026-003'].id, score: 79, grade: 'B', gradePoint: 3.0, remarks: 'Good vocabulary' },
-    { examId: midtermExam.id, examSubjectId: examSubSci.id, studentId: studentsMap['STU-2026-003'].id, score: 82, grade: 'A', gradePoint: 3.7, remarks: 'Consistent participation' },
-    { examId: midtermExam.id, examSubjectId: examSubICT.id, studentId: studentsMap['STU-2026-003'].id, score: 75, grade: 'B', gradePoint: 3.0, remarks: 'Sound fundamentals' },
-  ];
-
-  for (const r of resultsData) {
-    await prisma.examResult.create({
+  } else {
+    studentUser = await prisma.user.create({
       data: {
-        ...r,
-        status: ResultStatus.PUBLISHED,
-        publishedAt: new Date('2026-10-20'),
-        enteredBy: adminUser.id
+        username: 'B20092',
+        email: 'student.b20092@school.local',
+        password: passwordHashStudent,
+        role: UserRole.STUDENT,
+        firstName: 'Bilal',
+        lastName: 'Farah',
+        phone: '+1 (555) 200-9200',
+        status: UserStatus.ACTIVE,
+        mustChangePassword: false,
       }
     });
   }
 
-  // 13. Timetables
-  console.log('Setting up weekly timetable for Grade 8A...');
-  const timetableSchedule = [
-    { day: DayOfWeek.MONDAY, startTime: '08:00', endTime: '09:00', subjectId: subjectsMap['MAT101'].id, teacherId: teachersMap['TCH-001'].id },
-    { day: DayOfWeek.MONDAY, startTime: '09:10', endTime: '10:10', subjectId: subjectsMap['ENG101'].id, teacherId: teachersMap['TCH-002'].id },
-    { day: DayOfWeek.MONDAY, startTime: '10:30', endTime: '11:30', subjectId: subjectsMap['SCI101'].id, teacherId: teachersMap['TCH-003'].id },
-    { day: DayOfWeek.MONDAY, startTime: '11:40', endTime: '12:40', subjectId: subjectsMap['ICT101'].id, teacherId: teachersMap['TCH-004'].id },
-
-    { day: DayOfWeek.TUESDAY, startTime: '08:00', endTime: '09:00', subjectId: subjectsMap['SCI101'].id, teacherId: teachersMap['TCH-003'].id },
-    { day: DayOfWeek.TUESDAY, startTime: '09:10', endTime: '10:10', subjectId: subjectsMap['MAT101'].id, teacherId: teachersMap['TCH-001'].id },
-    { day: DayOfWeek.TUESDAY, startTime: '10:30', endTime: '11:30', subjectId: subjectsMap['ENG101'].id, teacherId: teachersMap['TCH-002'].id },
-
-    { day: DayOfWeek.WEDNESDAY, startTime: '08:00', endTime: '09:00', subjectId: subjectsMap['ICT101'].id, teacherId: teachersMap['TCH-004'].id },
-    { day: DayOfWeek.WEDNESDAY, startTime: '09:10', endTime: '10:10', subjectId: subjectsMap['MAT101'].id, teacherId: teachersMap['TCH-001'].id },
-    { day: DayOfWeek.WEDNESDAY, startTime: '10:30', endTime: '11:30', subjectId: subjectsMap['ENG101'].id, teacherId: teachersMap['TCH-002'].id },
-
-    { day: DayOfWeek.THURSDAY, startTime: '08:00', endTime: '09:00', subjectId: subjectsMap['MAT101'].id, teacherId: teachersMap['TCH-001'].id },
-    { day: DayOfWeek.THURSDAY, startTime: '09:10', endTime: '10:10', subjectId: subjectsMap['SCI101'].id, teacherId: teachersMap['TCH-003'].id },
-    { day: DayOfWeek.THURSDAY, startTime: '10:30', endTime: '11:30', subjectId: subjectsMap['ICT101'].id, teacherId: teachersMap['TCH-004'].id },
-  ];
-
-  for (const t of timetableSchedule) {
-    await prisma.timetable.create({
-      data: {
-        classId: grade8.id,
-        sectionId: sec8A.id,
-        subjectId: t.subjectId,
-        teacherId: t.teacherId,
-        day: t.day,
-        startTime: t.startTime,
-        endTime: t.endTime,
-        room: 'Block B - 201',
-        academicYearId: academicYear.id,
-        termId: term1.id
-      }
-    });
-  }
-
-  // 14. Announcements
-  console.log('Publishing initial announcements...');
-  await prisma.announcement.createMany({
-    data: [
-      {
-        title: 'Welcome to Academic Year 2026/2027',
-        content: 'We welcome all faculty, staff, and students to the new school year. Please review orientation guidelines and timetables.',
-        audience: AnnouncementAudience.ALL,
-        createdById: adminUser.id
-      },
-      {
-        title: 'Midterm Examination Results Released',
-        content: 'Midterm examination scores have been finalized and published. Students can view detailed report cards on their portal.',
-        audience: AnnouncementAudience.ALL,
-        createdById: adminUser.id
-      },
-      {
-        title: 'Faculty Department Meeting: Curriculum Review',
-        content: 'All teachers are requested to attend the academic council meeting this Thursday at 3:00 PM in the Conference Hall.',
-        audience: AnnouncementAudience.TEACHERS,
-        createdById: adminUser.id
-      },
-      {
-        title: 'Science & Robotics Exhibition Next Month',
-        content: 'Grade 8 and 9 students interested in participating in the annual robotics showcase must register projects with Teacher Fatima.',
-        audience: AnnouncementAudience.STUDENTS,
-        createdById: adminUser.id
-      }
-    ]
-  });
-
-  // 15. Notifications
-  console.log('Creating initial notifications...');
-  const alexJohnsonUser = await prisma.user.findUnique({ where: { email: 'student@school.local' } });
-  if (alexJohnsonUser) {
-    await prisma.notification.createMany({
-      data: [
-        {
-          userId: alexJohnsonUser.id,
-          title: 'Exam Results Published',
-          message: 'Your Midterm Examination results are now available. Your overall average is 92.75% (A+).',
-          type: 'EXAM_RESULT',
-          link: '/student/results'
-        },
-        {
-          userId: alexJohnsonUser.id,
-          title: 'Weekly Timetable Updated',
-          message: 'Mathematics lab session has been scheduled for Wednesday 09:10 AM.',
-          type: 'TIMETABLE',
-          link: '/student/timetable'
-        }
+  let studentProfile = await prisma.student.findFirst({
+    where: {
+      OR: [
+        { userId: studentUser.id },
+        { studentNumber: 'B20092' }
       ]
+    }
+  });
+
+  if (studentProfile) {
+    studentProfile = await prisma.student.update({
+      where: { id: studentProfile.id },
+      data: {
+        userId: studentUser.id,
+        studentNumber: 'B20092',
+        admissionNumber: 'ADM-20092',
+        firstName: 'Bilal',
+        lastName: 'Farah',
+        gender: Gender.MALE,
+        dateOfBirth: new Date('2012-05-14'),
+        phone: '+1 (555) 200-9200',
+        email: 'student.b20092@school.local',
+        guardianName: 'Farah Jama',
+        guardianPhone: '+1 (555) 200-9201',
+        relationship: 'Father',
+        status: StudentStatus.ACTIVE
+      }
+    });
+  } else {
+    studentProfile = await prisma.student.create({
+      data: {
+        userId: studentUser.id,
+        studentNumber: 'B20092',
+        admissionNumber: 'ADM-20092',
+        firstName: 'Bilal',
+        lastName: 'Farah',
+        gender: Gender.MALE,
+        dateOfBirth: new Date('2012-05-14'),
+        phone: '+1 (555) 200-9200',
+        email: 'student.b20092@school.local',
+        guardianName: 'Farah Jama',
+        guardianPhone: '+1 (555) 200-9201',
+        relationship: 'Father',
+        status: StudentStatus.ACTIVE
+      }
     });
   }
 
-  // 16. Audit Log
-  console.log('Logging initial system events...');
-  await prisma.auditLog.createMany({
-    data: [
-      {
-        userId: adminUser.id,
-        action: 'SYSTEM_INIT',
-        entity: 'System',
-        entityId: 'seed',
-        description: 'Complete system initialized with academic structure and roles.',
-        ipAddress: '127.0.0.1'
-      },
-      {
-        userId: adminUser.id,
-        action: 'PUBLISH_RESULT',
-        entity: 'ExamResult',
-        entityId: midtermExam.id,
-        description: 'Published results for Midterm Examination 2026.',
-        ipAddress: '127.0.0.1'
+  // Enroll Student in Grade 8A
+  await prisma.enrollment.upsert({
+    where: {
+      studentId_academicYearId: {
+        studentId: studentProfile.id,
+        academicYearId: academicYear.id
       }
-    ]
+    },
+    update: {
+      classId: grade8.id,
+      sectionId: sec8A.id,
+      status: StudentStatus.ACTIVE
+    },
+    create: {
+      studentId: studentProfile.id,
+      academicYearId: academicYear.id,
+      classId: grade8.id,
+      sectionId: sec8A.id,
+      status: StudentStatus.ACTIVE
+    }
   });
 
-  console.log('✅ Seed completed successfully! All entities connected to PostgreSQL database.');
+  console.log('\n======================================================');
+  console.log('✅ Real Role Accounts Successfully Generated:');
+  console.log('------------------------------------------------------');
+  console.log('1. ADMIN ROLE:');
+  console.log('   Email:    admin@gmail.com');
+  console.log('   Password: 123321@Admin');
+  console.log('------------------------------------------------------');
+  console.log('2. TEACHER ROLE:');
+  console.log('   Username: ahmed.teacher');
+  console.log('   Password: Teacher123!');
+  console.log('   Class:    Grade 8A (Mathematics)');
+  console.log('------------------------------------------------------');
+  console.log('3. STUDENT ROLE:');
+  console.log('   Student ID: B20092');
+  console.log('   Password:   Student123!');
+  console.log('   Class:      Grade 8A');
+  console.log('======================================================');
+  console.log('School Name: School Management System');
+  console.log('No demo/fake data remaining in the database.\n');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error in seed:', e);
+    console.error('❌ Error executing clean role seed:', e);
     process.exit(1);
   })
   .finally(async () => {

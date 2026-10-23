@@ -174,7 +174,7 @@ export function Sidebar() {
         </div>
         <div>
           <h1 className="text-sm font-semibold text-white tracking-tight leading-none">
-            Apex Academy
+            School Management
           </h1>
           <div className="flex items-center gap-1.5 mt-1">
             <span className="text-[10px] font-bold tracking-wider uppercase text-[#5BA5FB]">
@@ -183,9 +183,9 @@ export function Sidebar() {
             <span className="text-[10px] text-slate-500">•</span>
             <span className="text-[10px] text-slate-400 font-medium truncate">
               {user.role === 'ADMIN'
-                ? 'School Management'
+                ? 'System Portal'
                 : user.role === 'TEACHER'
-                ? 'Teaching Portal'
+                ? 'Faculty Portal'
                 : 'Student Portal'}
             </span>
           </div>

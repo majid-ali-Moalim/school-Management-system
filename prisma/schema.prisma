@@ -520,12 +520,12 @@ model AuditLog {
 
 model SchoolSetting {
   id                     String   @id @default("default")
-  schoolName             String   @default("Apex International Academy")
+  schoolName             String   @default("School Management System")
   logoUrl                String?
   address                String   @default("124 Education Boulevard, Academic District")
   phone                  String   @default("+1 (555) 234-5678")
-  email                  String   @default("info@apexacademy.edu")
-  website                String   @default("https://apexacademy.edu")
+  email                  String   @default("info@school.local")
+  website                String   @default("https://school.local")
   currentAcademicYearId String?
   currentTermId          String?
   timezone               String   @default("UTC")

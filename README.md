@@ -1,4 +1,4 @@
-# Horizon International School Management System (SMS)
+# School Management System (SMS)
 ### Full-Stack Production Application
 
 A complete, enterprise-grade, multi-role School Management System built with a **Next.js 14 (App Router)** frontend, **Node.js/Express (TypeScript)** REST API backend, **Prisma ORM**, and **Supabase PostgreSQL**.

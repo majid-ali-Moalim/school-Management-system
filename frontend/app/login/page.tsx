@@ -77,10 +77,10 @@ export default function LoginPage() {
             <School className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Apex International Academy
+            School Management System
           </h1>
           <p className="text-sm text-[#6B7280] mt-1 font-medium">
-            School Management & Student Information System
+            Administrative & Academic Management Portal
           </p>
         </div>
 
@@ -269,7 +269,7 @@ export default function LoginPage() {
 
         {/* Footer Note */}
         <p className="text-center text-xs text-[#6B7280] mt-5">
-          Apex Academy SMS • Connected to Supabase PostgreSQL
+          School Management System • Connected to Supabase PostgreSQL
         </p>
       </div>
 
